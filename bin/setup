@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if ! hash docker-compose 2>/dev/null; then
+  echo "== ERROR =="
+  echo "docker-compose not found"
+  exit 1
+fi
+
+echo "== Check environment file =="
+if [ ! -f .env ]; then
+  cp -v .env.example .env
+fi
+
+echo "== Verify inteligana docker network =="
+if ! docker network inspect inteligana &> /dev/null ; then
+  docker network create inteligana
+fi
+
+echo "== Initial database config =="
+docker-compose up -d postgres
+
+echo "== Building base Docker image =="
+docker-compose stop api_rails
+docker-compose rm -f
+docker-compose build
+
+echo "== Installing dependencies =="
+docker-compose run --rm api_rails gem update bundler
+docker-compose run --rm api_rails bundle install
+
+echo "== Final database config =="
+if ! docker-compose run --rm api_rails bin/rails db:version > /dev/null ; then
+  echo "Database not found..."
+  docker-compose run --rm api_rails bin/rails db:drop db:create db:migrate
+  docker-compose run --rm -e "RAILS_ENV=test" api_rails bin/rails db:schema:load
+fi
+
+echo "== Restarting application =="
+docker-compose up -d api_rails
+
+echo "== Development environment =="
+docker-compose ps

@@ -1,0 +1,20 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  host: <%= ENV['INTELIGANA_API_DATABASE_HOSTNAME'] || 'localhost' %>
+  username: <%= ENV['INTELIGANA_API_DATABASE_USERNAME'] || 'postgres' %>
+  password: <%= ENV['INTELIGANA_API_DATABASE_PASSWORD'] %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  port: <%= ENV['INTELIGANA_API_DATABASE_PORT'] || '5432' %>
+
+development:
+  <<: *default
+  database: inteligana_api_development
+
+test:
+  <<: *default
+  database: inteligana_api_test
+
+production:
+  <<: *default
+  url: <%= ENV['DATABASE_URL'] %>
